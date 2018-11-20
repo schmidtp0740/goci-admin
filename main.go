@@ -5,8 +5,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/schmidtp0740/gociadm/pkg/admin"
-	"github.com/schmidtp0740/gociadm/pkg/scan"
+	"github.com/schmidtp0740/goci-admin/pkg/admin"
+	"github.com/schmidtp0740/goci-admin/pkg/scan"
 )
 
 // gociadm - scans an oci env and checks for running instances.
