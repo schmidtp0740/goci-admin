@@ -1,12 +1,12 @@
 package main
 
 import (
-	"context"
 	"log"
 	"os"
+	"time"
 
-	"github.com/oracle/oci-go-sdk/common"
-	"github.com/oracle/oci-go-sdk/core"
+	"github.com/schmidtp0740/gociadm/pkg/admin"
+	"github.com/schmidtp0740/gociadm/pkg/scan"
 )
 
 // gociadm - scans an oci env and checks for running instances.
@@ -16,64 +16,23 @@ import (
 func main() {
 
 	if os.Getenv("C") == "" {
-		log.Printf("Must declare environement variable $C with compartment-id")
-		return
-	}
-	// every 5 seconds scan for instances in compartment
-	scanOciEnv()
-
-	// stop compute instances that are running
-	stopComputeInstances()
-}
-
-func scanOciEnv() (listOfRunnningInstances []string) {
-
-	// get default configuration file at $HOME/.oci/config
-	// TODO change this to another method other than default file and path?
-	configProvider := common.DefaultConfigProvider()
-
-	// create compute client with configuration provider
-	client, err := core.NewComputeClientWithConfigurationProvider(configProvider)
-	if err != nil {
-		log.Println("error getting configuration file: " + err.Error())
+		log.Fatalf("Must declare environement variable $C with compartment-id")
 		return
 	}
 
-	request := core.ListInstancesRequest{}
+	// run 4ever to scan for running instances then stop them
+	for {
 
-	request.CompartmentId = common.String(os.Getenv("C"))
+		// every 5 seconds scan for instances in compartment
+		// change this timer to some time after 6 pm CST
+		log.Printf("Waiting 5 seconds\n")
+		time.Sleep(5 * time.Second)
 
-	request.LifecycleState = core.InstanceLifecycleStateRunning
+		listOfRunningInstances := scan.OciEnv()
 
-	response, err := client.ListInstances(context.Background(), request)
-	if err != nil {
-		log.Println("error getting list of instances" + err.Error())
+		// stop compute instances that are running
+		admin.StopOCIComputeInstances(listOfRunningInstances)
+
 	}
 
-	// scan through items and print their details
-	for _, item := range response.Items {
-		log.Println("---Found new Running Instance---")
-
-		log.Printf("Display Name: %s\n", *item.DisplayName)
-		log.Printf("ID: %s\n", *item.Id)
-		// starting of finding oke instances
-		if val, ok := item.Metadata["oke-cluster-id"]; ok {
-			log.Printf("\t---Found OKE Node Instance---")
-			log.Printf("\tFound %s, value: %s\n", "oke-cluster-id", val)
-			if val, ok := item.Metadata["oke-pool-id"]; ok {
-				log.Printf("\tFound %s, value: %s\n", "oke-pool-id", val)
-			}
-			log.Printf("\tNot adding instance to list\n")
-			continue
-		}
-
-		log.Printf("Added to list...")
-		listOfRunnningInstances = append(listOfRunnningInstances, *item.Id)
-	}
-
-	log.Printf("%s", listOfRunnningInstances)
-
-	return listOfRunnningInstances
 }
-
-func stopComputeInstances() {}
